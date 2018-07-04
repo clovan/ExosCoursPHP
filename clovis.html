@@ -1,1 +1,111 @@
-blabla html 
+package com.main;
+
+import java.io.BufferedReader;
+import java.io.FileOutputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+
+import  org.apache.poi.hssf.usermodel.HSSFRow;
+import  org.apache.poi.hssf.usermodel.HSSFSheet;
+import  org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.sling.commons.json.JSONArray;
+import org.apache.sling.commons.json.JSONObject;
+
+@SuppressWarnings("deprecation")
+public class DMCrawler {
+
+	private final String USER_AGENT = "Mozilla/5.0";
+
+	public static void main(String[] args) throws Exception {
+
+		DMCrawler http = new DMCrawler();
+
+		System.out.println("Testing 1 - Send Http GET request");
+		http.sendGet();
+
+	}
+
+
+	private void sendGet() throws Exception {
+
+		String url = "https://services.dm.de/websearch/search/pues?type=product&tenant=de_mcr&q=&categoryId=110300&pageSize=100&sort=relevance&cp=4&productQuery=&initialProductQuery=&hiddenFacets=";
+		
+		URL obj = new URL(url);
+		HttpURLConnection con = (HttpURLConnection) obj.openConnection();
+		
+		con.setRequestMethod("GET");
+
+		con.setRequestProperty("User-Agent", USER_AGENT);
+
+		int responseCode = con.getResponseCode();
+		System.out.println("\nSending 'GET' request to URL : " + url);
+		System.out.println("Response Code : " + responseCode);
+
+		BufferedReader in = new BufferedReader(
+		        new InputStreamReader(con.getInputStream()));
+		String inputLine;
+		StringBuffer response = new StringBuffer();
+
+		while ((inputLine = in.readLine()) != null) {
+			response.append(inputLine);
+		}
+		in.close();
+
+		JSONObject output = new JSONObject(response.toString());
+		JSONArray jsonArray = output.getJSONArray("serviceProducts");
+		
+		
+		try {
+	          String filename = "C:\\Users\\username\\Desktop\\haarfarbe\\TP4.xls" ;
+	          HSSFWorkbook workbook = new HSSFWorkbook();
+	          HSSFSheet sheet = workbook.createSheet("FirstSheet");  
+
+	          HSSFRow rowhead = sheet.createRow((short)0);
+	          rowhead.createCell(0).setCellValue("Gtin");
+	          rowhead.createCell(1).setCellValue("Country");
+	          rowhead.createCell(2).setCellValue("Language");
+	          rowhead.createCell(3).setCellValue("Brand");
+	          rowhead.createCell(4).setCellValue("productline");
+	          rowhead.createCell(5).setCellValue("Product Title");
+	          rowhead.createCell(6).setCellValue("packshot URL");
+	          rowhead.createCell(7).setCellValue("product URL");
+	          
+	          for (int i = 0; i < jsonArray.length(); i++) {
+	        	  HSSFRow row = sheet.createRow((short)(i+1));
+	  		      JSONObject explrObject = jsonArray.getJSONObject(i);
+	  		      row.createCell(0).setCellValue(explrObject.getString("gtin"));
+		          row.createCell(1).setCellValue(explrObject.getString("isoCountry"));
+		          row.createCell(2).setCellValue(explrObject.getString("isoLanguage"));
+		          
+		         byte[] bytearray = explrObject.getString("brand").getBytes("UTF-8");
+		         String value = new String(bytearray, "UTF-8");
+		          row.createCell(3).setCellValue(value);
+		          row.createCell(4).setCellValue("Dauerwellen");
+		          if(explrObject.has("netQuantityContent"))
+		          {
+		          row.createCell(5).setCellValue(explrObject.getString("name")+","+Math.round(Float.valueOf(explrObject.getString("netQuantityContent")))+""+explrObject.getString("contentUnit"));
+		          }
+		          else
+		          {
+		        	  row.createCell(5).setCellValue(explrObject.getString("name"));  
+		          }
+		          row.createCell(6).setCellValue(explrObject.getJSONArray("links").getJSONObject(0).getString("href"));
+		          row.createCell(7).setCellValue("https://www.dm.de/"+explrObject.getJSONArray("links").getJSONObject(2).getString("href"));
+	  		}
+	          FileOutputStream fileOut = new FileOutputStream(filename);
+	          workbook.write(fileOut);
+	          fileOut.close();
+	          System.out.println("Your excel file has been generated!");
+	          String defaultCharacterEncoding = System.getProperty("file.encoding");
+	          System.out.println("defaultCharacterEncoding by property: " + defaultCharacterEncoding);
+
+	      } catch ( Exception ex ) {
+	          System.out.println(ex);
+	      }
+
+	}
+	
+	
+
+}
